@@ -89,7 +89,7 @@ static void attemptToBeFunny(const int argc, char const * const * const argv)
 
 static void giveUpAndJustSayNo()
 {
-	printf("no\n");
+	fprintf(stderr, "no\n");
 }
 
 int main(int argc, char const * const * const argv)
