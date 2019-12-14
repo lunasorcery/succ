@@ -16,6 +16,20 @@ static const char* gColorReset         = gColoredOutput ? "\u001b[0m"    : "";
 
 static std::map<std::string,int> gObservedFlags;
 
+// I'd love to use std::filesystem the way god intended, but alas, Apple:
+// https://twitter.com/lunasorcery/status/1205904118277197825
+// https://twitter.com/jfbastien/status/1205906768313733120
+static bool fileExists(char const * const path)
+{
+	FILE* fh = fopen(path, "rb");
+	if (fh) {
+		fclose(fh);
+		return true;
+	} else {
+		return false;
+	}
+}
+
 static bool isFlag(char const * const arg)
 {
 	return arg[0] == '-';
@@ -51,10 +65,8 @@ static void checkFilesActuallyExist(const int argc, char const * const * const a
 	bool hasAnyMissingFiles = false;
 	for (int i = 1; i < argc; ++i) {
 		if (!isFlag(argv[i])) {
-			FILE* fh = fopen(argv[i], "rb");
-			if (fh) {
+			if (fileExists(argv[i])) {
 				hasAnyFiles = true;
-				fclose(fh);
 			} else {
 				hasAnyMissingFiles = true;
 				fprintf(stderr, "succ: %serror:%s no such file or directory: '%s'\n", gColorBrightRed, gColorReset, argv[i]);
