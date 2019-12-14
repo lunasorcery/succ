@@ -23,7 +23,7 @@ SUCC is designed to be flag-compatible with GCC and Clang, and should work as a 
 [building]: #building
 SUCC is not yet self-hosting, so for now it builds using your standards-compliant C++ compiler of choice. A Makefile is provided.
 
-_Note: Building SUCC currently requires support for C++14._
+_Note: Building SUCC currently requires support for C++20._
 
 ### Does it support Windows?
 [windows]: #windows

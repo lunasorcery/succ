@@ -1,6 +1,8 @@
 #include <cstdlib>
 #include <cstdio>
 #include <string>
+#include <map>
+#include <regex>
 #include <unistd.h>
 
 using namespace std::string_literals;
@@ -8,8 +10,11 @@ using namespace std::string_literals;
 // this whole cursed thing would at least be a bit more elegant if we had P1275
 
 static bool gColoredOutput = isatty(STDOUT_FILENO);
-static const char* gColorBrightRed = gColoredOutput ? "\u001b[31;1m" : "";
-static const char* gColorReset     = gColoredOutput ? "\u001b[0m"    : "";
+static const char* gColorBrightRed     = gColoredOutput ? "\u001b[31;1m" : "";
+static const char* gColorBrightMagenta = gColoredOutput ? "\u001b[35;1m" : "";
+static const char* gColorReset         = gColoredOutput ? "\u001b[0m"    : "";
+
+static std::map<std::string,int> gObservedFlags;
 
 static bool isFlag(char const * const arg)
 {
@@ -64,10 +69,61 @@ static void checkFilesActuallyExist(const int argc, char const * const * const a
 	}
 }
 
+static void handleDuplicateFlag(const std::string& flag)
+{
+	auto result = gObservedFlags.find(flag);
+	if (result != gObservedFlags.end()) {
+		switch (result->second) {
+			case 1: {
+				fprintf(stderr, "%swarning:%s Clearly you have very little confidence in your compiler, since you feel the need to specify the same flag twice. [%s]\n", gColorBrightMagenta, gColorReset, flag.c_str());
+				break;
+			}
+			case 2: {
+				fprintf(stderr, "%swarning:%s Again?! You really have no trust at all, do you? [%s]\n", gColorBrightMagenta, gColorReset, flag.c_str());
+				break;
+			}
+			case 3: {
+				fprintf(stderr, "%swarning:%s Goodness me. I refuse to believe you're this mistrustful. Go check your build scripts, you've surely got a mistake somewhere. [%s]\n", gColorBrightMagenta, gColorReset, flag.c_str());
+				break;
+			}
+		}
+		gObservedFlags[flag]++;
+	} else {
+		gObservedFlags.emplace(flag, 1);
+	}
+}
+
+static void handleWarningFlag(const std::string& flag)
+{
+	if (flag.starts_with("-Wno-")) {
+		fprintf(stderr, "%swarning:%s Have confidence in your code. Do not try to disable warnings. [%s]\n", gColorBrightMagenta, gColorReset, flag.c_str());
+		return;
+	}
+
+	if (flag == "-Werror") {
+		fprintf(stderr, "succ: %serror:%s You asked for an error, so here, have one. [-Werror]\n", gColorBrightRed, gColorReset);
+		exit(1);
+	}
+}
+
+static void handleFeatureFlag(const std::string& flag)
+{
+	// https://twitter.com/___srv_/status/1205722571100041216
+	// https://twitter.com/Andrew_Taylor/status/1205764994526265345
+	if (std::regex_search(flag, std::regex("^-fpwe+ase$"))) {
+		usleep((flag.length() - 7) * 1000000);
+	}
+}
+
 static void handleFlag(const std::string& flag)
 {
-	(void)flag;
-	// TODO: add snarky responses to various common flags
+	handleDuplicateFlag(flag);
+
+	if (flag.starts_with("-W")) {
+		handleWarningFlag(flag);
+	} else if (flag.starts_with("-f")) {
+		handleFeatureFlag(flag);
+	}
 }
 
 static void handleFile(const std::string& file)
@@ -89,7 +145,7 @@ static void attemptToBeFunny(const int argc, char const * const * const argv)
 
 static void giveUpAndJustSayNo()
 {
-	fprintf(stderr, "no\n");
+	fprintf(stderr, "succ: %serror:%s no\n", gColorBrightRed, gColorReset);
 }
 
 int main(int argc, char const * const * const argv)
