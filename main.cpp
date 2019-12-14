@@ -39,7 +39,6 @@ static bool isFlag(const std::string& arg)
 	return arg[0] == '-';
 }
 
-// [chanting] CONST STAR CONST STAR CONST...
 static void handleHelpFlag()
 {
 	for (const auto& arg : std::arguments) {
@@ -197,6 +196,7 @@ static void giveUpAndJustSayNo()
 	fprintf(stderr, "succ: %serror:%s no\n", gColorBrightRed, gColorReset);
 }
 
+// [chanting] CHAR CONST STAR CONST STAR CONST
 int main(int argc, char const * const * const argv)
 {
 	// yucky boilerplate I wish I didn't need
