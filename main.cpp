@@ -3,11 +3,15 @@
 #include <string>
 #include <map>
 #include <regex>
+#include <vector>
 #include <unistd.h>
 
 using namespace std::string_literals;
 
-// this whole cursed thing would at least be a bit more elegant if we had P1275
+// we don't have P1275 but this works well enough as a substitute for now
+namespace std {
+	std::vector<std::string const> arguments;
+}
 
 static bool gColoredOutput = isatty(STDOUT_FILENO);
 static const char* gColorBrightRed     = gColoredOutput ? "\u001b[31;1m" : "";
@@ -19,9 +23,9 @@ static std::map<std::string,int> gObservedFlags;
 // I'd love to use std::filesystem the way god intended, but alas, Apple:
 // https://twitter.com/lunasorcery/status/1205904118277197825
 // https://twitter.com/jfbastien/status/1205906768313733120
-static bool fileExists(char const * const path)
+static bool fileExists(const std::string& path)
 {
-	FILE* fh = fopen(path, "rb");
+	FILE* fh = fopen(path.c_str(), "rb");
 	if (fh) {
 		fclose(fh);
 		return true;
@@ -30,26 +34,26 @@ static bool fileExists(char const * const path)
 	}
 }
 
-static bool isFlag(char const * const arg)
+static bool isFlag(const std::string& arg)
 {
 	return arg[0] == '-';
 }
 
 // [chanting] CONST STAR CONST STAR CONST...
-static void handleHelpFlag(const int argc, char const * const * const argv)
+static void handleHelpFlag()
 {
-	for (int i = 1; i < argc; ++i) {
-		if (argv[i] == "-help"s || argv[i] == "--help"s || argv[i] == "--help-hidden"s) {
+	for (const auto& arg : std::arguments) {
+		if (arg == "-help" || arg == "--help" || arg == "--help-hidden") {
 			printf("You will find no help here.\n");
 			exit(0);
 		}
 	}
 }
 
-static void handleVersionFlag(const int argc, char const * const * const argv)
+static void handleVersionFlag()
 {
-	for (int i = 1; i < argc; ++i) {
-		if (argv[i] == "-v"s || argv[i] == "--version"s) {
+	for (const auto& arg : std::arguments) {
+		if (arg == "-v" || arg == "--version") {
 			printf("SUCC version 0.0.1\n");
 			printf("Target: at least a couple dozen retweets and maybe a 'luna why'\n");
 			printf("Thread model: none\n");
@@ -59,17 +63,17 @@ static void handleVersionFlag(const int argc, char const * const * const argv)
 	}
 }
 
-static void checkFilesActuallyExist(const int argc, char const * const * const argv)
+static void checkFilesActuallyExist()
 {
 	bool hasAnyFiles = false;
 	bool hasAnyMissingFiles = false;
-	for (int i = 1; i < argc; ++i) {
-		if (!isFlag(argv[i])) {
-			if (fileExists(argv[i])) {
+	for (const auto& arg : std::arguments) {
+		if (!isFlag(arg)) {
+			if (fileExists(arg)) {
 				hasAnyFiles = true;
 			} else {
 				hasAnyMissingFiles = true;
-				fprintf(stderr, "succ: %serror:%s no such file or directory: '%s'\n", gColorBrightRed, gColorReset, argv[i]);
+				fprintf(stderr, "succ: %serror:%s no such file or directory: '%s'\n", gColorBrightRed, gColorReset, arg.c_str());
 			}
 		}
 	}
@@ -174,13 +178,13 @@ static void handleFile(const std::string& file)
 	// TODO: add minimal "parsing" of code to allow for basic shit-talking
 }
 
-static void attemptToBeFunny(const int argc, char const * const * const argv)
+static void attemptToBeFunny()
 {
-	for (int i = 1; i < argc; ++i) {
-		if (isFlag(argv[i])) {
-			handleFlag(argv[i]);
+	for (const auto& arg : std::arguments) {
+		if (isFlag(arg)) {
+			handleFlag(arg);
 		} else {
-			handleFile(argv[i]);
+			handleFile(arg);
 		}
 	}
 }
@@ -192,10 +196,18 @@ static void giveUpAndJustSayNo()
 
 int main(int argc, char const * const * const argv)
 {
-	handleHelpFlag(argc, argv);
-	handleVersionFlag(argc, argv);
-	checkFilesActuallyExist(argc, argv);
-	attemptToBeFunny(argc, argv);
+	// yucky boilerplate I wish I didn't need
+	// also, deliberately skip the first argument (process path)
+	// though whether P1275 would do this is uncertain
+	// https://twitter.com/slurpsmadrips/status/1205948788864507904
+	for (int i = 1; i < argc; ++i) {
+		std::arguments.push_back(argv[i]);
+	}
+
+	handleHelpFlag();
+	handleVersionFlag();
+	checkFilesActuallyExist();
+	attemptToBeFunny();
 	giveUpAndJustSayNo();
 	return 1;
 }
