@@ -95,13 +95,13 @@ static void handleDuplicateFlag(const std::string& flag)
 
 static void handleWarningFlag(const std::string& flag)
 {
-	if (flag.starts_with("-Wno-")) {
+	if (flag.starts_with("-Wno-") || flag == "-w") {
 		fprintf(stderr, "%swarning:%s Have confidence in your code. Do not try to disable warnings. [%s]\n", gColorBrightMagenta, gColorReset, flag.c_str());
 		return;
 	}
 
-	if (flag == "-Werror") {
-		fprintf(stderr, "succ: %serror:%s You asked for an error, so here, have one. [-Werror]\n", gColorBrightRed, gColorReset);
+	if (flag == "-Werror" || flag.starts_with("-Werror=")) {
+		fprintf(stderr, "succ: %serror:%s You asked for an error, so here, have one. [%s]\n", gColorBrightRed, gColorReset, flag.c_str());
 		exit(1);
 	}
 }
@@ -112,17 +112,47 @@ static void handleFeatureFlag(const std::string& flag)
 	// https://twitter.com/Andrew_Taylor/status/1205764994526265345
 	if (std::regex_search(flag, std::regex("^-fpwe+ase$"))) {
 		usleep((flag.length() - 7) * 1000000);
+		return;
 	}
+
+	if (flag == "-fmodules" || flag == "-fmodules-ts") {
+		fprintf(stderr, "succ: %serror:%s Don't even bother. Modules are broken and you know it. [%s]\n", gColorBrightRed, gColorReset, flag.c_str());
+		exit(1);
+	}
+}
+
+static void handleStdFlag(const std::string& flag)
+{
+	const std::string version = flag.substr(5);
+
+	if (std::regex_search(version, std::regex("^(c|gnu)\\+\\+(\\d+|2a)$"))) {
+		if (version.starts_with("gnu")) {
+			fprintf(stderr, "succ: %serror:%s SUCC only supports standards-compliant code. We'll have none of those fancy GNU extensions here, thank you. [%s]\n", gColorBrightRed, gColorReset, flag.c_str());
+			exit(1);
+		} else if (version == "c++98" || version == "c++03") {
+			fprintf(stderr, "%swarning:%s Bring yourself into the modern day, gramps. [%s]\n", gColorBrightMagenta, gColorReset, flag.c_str());
+			return;
+		}
+		else if (version == "c++11" || version == "c++14" || version == "c++17" || version == "c++2a") {
+			// do nothing
+			return;
+		}
+	}
+
+	fprintf(stderr, "succ: %serror:%s What? That's not a real version of the language. [%s]\n", gColorBrightRed, gColorReset, flag.c_str());
+	exit(1);
 }
 
 static void handleFlag(const std::string& flag)
 {
 	handleDuplicateFlag(flag);
 
-	if (flag.starts_with("-W")) {
+	if (flag.starts_with("-W") || flag == "-w") {
 		handleWarningFlag(flag);
 	} else if (flag.starts_with("-f")) {
 		handleFeatureFlag(flag);
+	} else if (flag.starts_with("-std=")) {
+		handleStdFlag(flag);
 	}
 }
 
