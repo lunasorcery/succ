@@ -148,6 +148,9 @@ static void handleStdFlag(const std::string& flag)
 		} else if (version == "c++98" || version == "c++03") {
 			fprintf(stderr, "%swarning:%s Bring yourself into the modern day, gramps. [%s]\n", gColorBrightMagenta, gColorReset, flag.c_str());
 			return;
+		} else if (version == "c++23") {
+			fprintf(stderr, "%swarning:%s Look, I want epochs as much as you do, but be patient. We're not there yet. [%s]\n", gColorBrightMagenta, gColorReset, flag.c_str());
+			return;
 		}
 		else if (version == "c++11" || version == "c++14" || version == "c++17" || version == "c++2a") {
 			// do nothing
