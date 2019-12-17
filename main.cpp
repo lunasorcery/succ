@@ -242,12 +242,6 @@ static void handleFile(const std::string& file)
 			fprintf(stderr, "%s%s^%s%s\n", repeatChar(' ', computePositionAccountingForTabs(line, pos)).c_str(), gColorBrightGreen, repeatChar('~', 14).c_str(), gColorReset);
 		}
 
-		if (size_t pos = line.find("( "); pos != std::string::npos) {
-			fprintf(stderr, "%s%s:%d:%zu %serror:%s Spaces inside parentheses? You must be joking.%s\n", gColorBrightDefault, file.c_str(), lineNum, pos+1, gColorBrightRed, gColorBrightDefault, gColorReset);
-			fprintf(stderr, "%s\n", replaceTabsWithSpaces(line).c_str());
-			fprintf(stderr, "%s%s^~%s\n", repeatChar(' ', computePositionAccountingForTabs(line, pos)).c_str(), gColorBrightGreen, gColorReset);
-		}
-
 		if (size_t pos = line.find("#include <C++>"); pos != std::string::npos) {
 			fprintf(stderr, "%s%s:%d:%zu %sawesome:%s Heck yeah, inclusivity!%s\n", gColorBrightDefault, file.c_str(), lineNum, pos+1, gColorBrightGreen, gColorBrightDefault, gColorReset);
 			fprintf(stderr, "%s\n", replaceTabsWithSpaces(line).c_str());
