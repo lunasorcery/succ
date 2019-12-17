@@ -4,6 +4,8 @@
 #include <map>
 #include <regex>
 #include <vector>
+#include <iostream>
+#include <fstream>
 #include <unistd.h>
 
 using namespace std::string_literals;
@@ -13,9 +15,13 @@ namespace std {
 	std::vector<std::string const> arguments;
 }
 
+static const int kTabWidth = 4; // fight me.
+
 static bool gColoredOutput = isatty(STDOUT_FILENO);
 static const char* gColorBrightRed     = gColoredOutput ? "\u001b[31;1m" : "";
+static const char* gColorBrightGreen   = gColoredOutput ? "\u001b[32;1m" : "";
 static const char* gColorBrightMagenta = gColoredOutput ? "\u001b[35;1m" : "";
+static const char* gColorBrightDefault = gColoredOutput ? "\u001b[39;1m" : "";
 static const char* gColorReset         = gColoredOutput ? "\u001b[0m"    : "";
 
 static std::map<std::string,int> gObservedFlags;
@@ -34,9 +40,58 @@ static bool fileExists(const std::string& path)
 	}
 }
 
+static std::string repeatChar(char c, size_t count)
+{
+	std::string buffer;
+	buffer.resize(count);
+	memset(buffer.data(), c ? c : ' ', count);
+	return buffer;
+}
+
 static bool isFlag(const std::string& arg)
 {
 	return arg[0] == '-';
+}
+
+static std::vector<std::string> getFileLines(const std::string& path)
+{
+	std::vector<std::string> lines;
+	std::ifstream fh(path);
+	if (fh) {
+		std::string line;
+		while (getline(fh, line)) {
+			lines.push_back(line);
+		}
+	}
+	return lines;
+}
+
+static std::string replaceTabsWithSpaces(const std::string& str)
+{
+	const std::string tabAsSpaces = repeatChar(' ', kTabWidth);
+
+	std::string result;
+	for (const auto& c : str) {
+		if (c == '\t') {
+			result += tabAsSpaces;
+		} else {
+			result += c;
+		}
+	}
+	return result;
+}
+
+static size_t computePositionAccountingForTabs(const std::string& str, size_t pos)
+{
+	size_t adjustedPosition = 0;
+	for (size_t i = 0; i < pos; ++i) {
+		if (str[i] == '\t') {
+			adjustedPosition += kTabWidth;
+		} else {
+			adjustedPosition++;
+		}
+	}
+	return adjustedPosition;
 }
 
 static void handleHelpFlag()
@@ -175,8 +230,24 @@ static void handleFlag(const std::string& flag)
 
 static void handleFile(const std::string& file)
 {
-	(void)file;
-	// TODO: add minimal "parsing" of code to allow for basic shit-talking
+	const std::vector<std::string> lines = getFileLines(file);
+
+	for (size_t i = 0; i < lines.size(); ++i) {
+		const int lineNum = i+1;
+		const std::string& line = lines[i];
+
+		if (size_t pos = line.find("std::filesystem"); pos != std::string::npos) {
+			fprintf(stderr, "%s%s:%d:%zu %serror:%s std::filesystem is unavailable: introduced in macOS 11.19%s\n", gColorBrightDefault, file.c_str(), lineNum, pos+1, gColorBrightRed, gColorBrightDefault, gColorReset);
+			fprintf(stderr, "%s\n", replaceTabsWithSpaces(line).c_str());
+			fprintf(stderr, "%s%s^%s%s\n", repeatChar(' ', computePositionAccountingForTabs(line, pos)).c_str(), gColorBrightGreen, repeatChar('~', 14).c_str(), gColorReset);
+		}
+
+		if (size_t pos = line.find("( "); pos != std::string::npos) {
+			fprintf(stderr, "%s%s:%d:%zu %serror:%s Spaces inside parentheses? You must be joking.%s\n", gColorBrightDefault, file.c_str(), lineNum, pos+1, gColorBrightRed, gColorBrightDefault, gColorReset);
+			fprintf(stderr, "%s\n", replaceTabsWithSpaces(line).c_str());
+			fprintf(stderr, "%s%s^~%s\n", repeatChar(' ', computePositionAccountingForTabs(line, pos)).c_str(), gColorBrightGreen, gColorReset);
+		}
+	}
 }
 
 static void attemptToBeFunny()
