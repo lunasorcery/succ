@@ -1,5 +1,6 @@
 #include <cstdlib>
 #include <cstdio>
+#include <cstring>
 #include <string>
 #include <map>
 #include <regex>
@@ -12,7 +13,7 @@ using namespace std::string_literals;
 
 // we don't have P1275 but this works well enough as a substitute for now
 namespace std {
-	std::vector<std::string const> arguments;
+	std::vector<std::string> arguments;
 }
 
 static const int kTabWidth = 4; // fight me.
